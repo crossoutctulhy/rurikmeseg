@@ -1,0 +1,313 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #36393f;
+            color: #fff;
+        }
+
+        .servers-list {
+            width: 72px;
+            background-color: #202225;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .server-icon {
+            width: 48px;
+            height: 48px;
+            background-color: #36393f;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #dcddde;
+            transition: border-radius 0.2s;
+        }
+
+        .server-icon:hover {
+            border-radius: 16px;
+            background-color: #5865f2;
+        }
+
+        .channels-list {
+            width: 240px;
+            background-color: #2f3136;
+            padding: 12px;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .members-list {
+            width: 240px;
+            background-color: #2f3136;
+            padding: 12px;
+        }
+
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-form {
+            background-color: #36393f;
+            padding: 24px;
+            border-radius: 5px;
+            width: 440px;
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #202225;
+            background-color: #202225;
+            color: #fff;
+            border-radius: 3px;
+        }
+
+        .login-form button {
+            width: 100%;
+            padding: 10px;
+            background-color: #5865f2;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .channel {
+            padding: 8px;
+            margin: 2px 0;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .channel:hover {
+            background-color: #36393f;
+        }
+
+        .member {
+            padding: 8px;
+            margin: 2px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .member-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .online {
+            background-color: #3ba55c;
+        }
+
+        .offline {
+            background-color: #747f8d;
+        }
+
+        .chat-area {
+            flex: 1;
+            background-color: #36393f;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .message-input {
+            padding: 20px;
+            background-color: #40444b;
+        }
+
+        .message-input input {
+            width: 100%;
+            padding: 10px;
+            background-color: #40444b;
+            border: none;
+            color: #fff;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-screen" id="loginScreen">
+        <div class="login-form">
+            <h2>Выберите никнейм</h2>
+            <input type="text" id="nicknameInput" placeholder="Введите никнейм">
+            <button onclick="login()">Войти</button>
+        </div>
+    </div>
+
+    <div class="servers-list">
+        <div class="server-icon" onclick="createServer()">+</div>
+        <!-- Серверы будут добавляться здесь -->
+    </div>
+
+    <div class="channels-list">
+        <h3>Текстовые каналы</h3>
+        <!-- Каналы будут добавляться здесь -->
+    </div>
+
+    <div class="main-content">
+        <div class="chat-area">
+            <!-- Сообщения будут появляться здесь -->
+        </div>
+        <div class="message-input">
+            <input type="text" placeholder="Написать сообщение...">
+        </div>
+    </div>
+
+    <div class="members-list">
+        <h3>Участники - 1</h3>
+        <!-- Участники будут добавляться здесь -->
+    </div>
+
+    <script>
+        // Хранение данных
+        const users = new Map();
+        const servers = new Map();
+        let currentUser = null;
+
+        function login() {
+            const nickname = document.getElementById('nicknameInput').value.trim();
+            
+            if (!nickname) {
+                alert('Введите никнейм!');
+                return;
+            }
+
+            if (users.has(nickname)) {
+                alert('Этот никнейм уже занят!');
+                return;
+            }
+
+            currentUser = {
+                nickname,
+                friends: new Set(),
+                friendRequests: new Set(),
+                servers: new Set(),
+                ownServer: null
+            };
+
+            users.set(nickname, currentUser);
+            document.getElementById('loginScreen').style.display = 'none';
+            updateUI();
+        }
+
+        function createServer() {
+            if (currentUser.ownServer) {
+                alert('Вы уже создали сервер!');
+                return;
+            }
+
+            const serverName = prompt('Введите название сервера:');
+            if (!serverName) return;
+
+            const server = {
+                name: serverName,
+                owner: currentUser.nickname,
+                members: new Set([currentUser.nickname]),
+                channels: new Map(),
+                textChannels: ['общий'],
+                voiceChannels: ['Голосовой']
+            };
+
+            servers.set(serverName, server);
+            currentUser.ownServer = serverName;
+            currentUser.servers.add(serverName);
+
+            updateUI();
+        }
+
+        function joinServer(serverName) {
+            const server = servers.get(serverName);
+            if (!server) return;
+
+            server.members.add(currentUser.nickname);
+            currentUser.servers.add(serverName);
+            updateUI();
+        }
+
+        function updateUI() {
+            // Обновление списка серверов
+            const serversList = document.querySelector('.servers-list');
+            serversList.innerHTML = '<div class="server-icon" onclick="createServer()">+</div>';
+
+            currentUser.servers.forEach(serverName => {
+                const serverIcon = document.createElement('div');
+                serverIcon.className = 'server-icon';
+                serverIcon.textContent = serverName[0].toUpperCase();
+                serversList.appendChild(serverIcon);
+            });
+
+            // Обновление списка участников
+            const membersList = document.querySelector('.members-list');
+            membersList.innerHTML = '<h3>Участники</h3>';
+
+            users.forEach((user, nickname) => {
+                const memberDiv = document.createElement('div');
+                memberDiv.className = 'member';
+                
+                const status = document.createElement('div');
+                status.className = 'member-status ' + (Math.random() > 0.5 ? 'online' : 'offline');
+                
+                const name = document.createElement('span');
+                name.textContent = nickname;
+
+                memberDiv.appendChild(status);
+                memberDiv.appendChild(name);
+                membersList.appendChild(memberDiv);
+            });
+        }
+
+        // Функции для работы с друзьями
+        function sendFriendRequest(targetNickname) {
+            const targetUser = users.get(targetNickname);
+            if (targetUser) {
+                targetUser.friendRequests.add(currentUser.nickname);
+            }
+        }
+
+        function acceptFriendRequest(senderNickname) {
+            if (currentUser.friendRequests.has(senderNickname)) {
+                currentUser.friendRequests.delete(senderNickname);
+                currentUser.friends.add(senderNickname);
+                
+                const sender = users.get(senderNickname);
+                sender.friends.add(currentUser.nickname);
+            }
+        }
+    </script>
+</body>
+</html>
